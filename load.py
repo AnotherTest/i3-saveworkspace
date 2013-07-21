@@ -1,13 +1,6 @@
 import i3, os, subprocess, time, pickle
 from multiprocessing import Process
-def moveMouse(x, y):
-    os.system("xdotool mousemove %d %d" % (x, y))
- 
-def clickMouse():
-    os.system("xdotool click 1")
-
 def doOrientation(layout):
-    print "%s split." % layout
     if layout == "horizontal":
         i3.split("h")
     elif layout == "vertical":
@@ -15,10 +8,19 @@ def doOrientation(layout):
     else:
         print "WARNING: Unsupported orientation option %s." % layout
 
-def focus((x, y)):
-    # Move mouse to focus the container
-    moveMouse(x + 2, y + 2)
-    clickMouse()
+def resize((width, height)):
+    rect = i3.filter(focused = True)[0]["rect"]
+    delta_w = (width - rect["width"]) / 19
+    delta_h = (height - rect["height"]) / 19
+    print "Will resize by", (delta_w, delta_h)
+    if delta_w < 0:
+        i3.resize("shrink", "width", "{x} px or {x} ppt".format(x = -delta_w))
+    else:
+        i3.resize("grow", "width", "{x} px or {x} ppt".format(x = delta_w))    
+    if delta_h < 0:
+        i3.resize("shrink", "height", "{x} px or {x} ppt".format(x = -delta_h))
+    else:
+        i3.resize("grow", "height", "{x} px or {x} ppt".format(x = delta_h))
 
 def make(tasks):
     for task in tasks:
@@ -27,11 +29,14 @@ def make(tasks):
                 target = subprocess.call, args = (tuple(task[1].split(" ")), )
             ).start()
             time.sleep(1)
-        elif task[0] == "focus":
-            focus(task[1])
-        elif task[0] == "layout":
+        elif task[0] == "resize":
+            resize(task[1])
+        elif task[0] == "orientation":
             doOrientation(task[1])
+        elif task[0] == "layout":
+            i3.layout(task[1])    
         time.sleep(1)
+
 print "Workspace file?"
 data = pickle.load(open(raw_input(), "r"))
 print "Workspace name?"
